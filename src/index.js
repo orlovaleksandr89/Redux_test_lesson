@@ -1,38 +1,62 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom'
-import { taskCompleted, titleChanged, taskDeleted } from './store/task'
+import {
+  titleChanged,
+  taskDeleted,
+  completeTask,
+  getTasks,
+  loadTasks,
+  getTasksLoadingStatus,
+  createNewTask
+} from './store/task'
 import configureStore from './store/store'
+import { Provider, useSelector, useDispatch } from 'react-redux'
+import { getError } from './store/errors'
 
 export const store = configureStore()
 
 const App = () => {
-  const [state, setState] = useState(store.getState())
-
-  const completeTask = (taskId) => {
-    store.dispatch(taskCompleted(taskId))
-  }
-
+  const state = useSelector(getTasks())
+  const isLoading = useSelector(getTasksLoadingStatus())
+  const error = useSelector(getError())
+  const dispatch = useDispatch()
   const changeTitle = (taskId) => {
-    store.dispatch(titleChanged(taskId))
+    dispatch(titleChanged(taskId))
   }
+
   const deleteTask = (taskId) => {
-    store.dispatch(taskDeleted(taskId))
+    dispatch(taskDeleted(taskId))
   }
 
   useEffect(() => {
-    store.subscribe(() => setState(store.getState()))
+    dispatch(loadTasks())
   }, [])
+
+  if (isLoading) {
+    return <h1>Loading....</h1>
+  }
+
+  const newTask = {
+    title: 'SOME NEW TITLE',
+    completed: false
+  }
 
   return (
     <div>
       <h1> App</h1>
-
+      <div>
+        <button onClick={() => dispatch(createNewTask(newTask))}>
+          Create a new task
+        </button>
+      </div>
       <ul>
         {state.map((element) => (
           <li key={element.id}>
             <p>{element.title}</p>
             <p>{`Completed: ${element.completed}`}</p>
-            <button onClick={() => completeTask(element.id)}>Complete</button>
+            <button onClick={() => dispatch(completeTask(element.id))}>
+              Complete
+            </button>
             <button
               style={{ marginLeft: '10px' }}
               onClick={() => changeTitle(element.id)}>
@@ -47,13 +71,16 @@ const App = () => {
           </li>
         ))}
       </ul>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   )
 }
 
 ReactDOM.render(
   <React.StrictMode>
-    <App />
+    <Provider store={store}>
+      <App />
+    </Provider>
   </React.StrictMode>,
   document.getElementById('root')
 )
